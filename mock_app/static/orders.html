@@ -1,0 +1,21 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>InvestPro | Orders</title>
+<link rel="stylesheet" href="styles.css"><script src="common.js"></script><script src="app.js"></script></head>
+<body><main>
+<h1 data-testid="page-title">Order history</h1>
+<div class="card"><div class="row"><div><label for="status-filter">Status</label>
+<select id="status-filter" data-testid="status-filter"><option value="">All</option><option>FILLED</option><option>PENDING</option><option>CANCELLED</option></select></div></div>
+<table data-testid="orders-table"><thead><tr><th>ID</th><th>Symbol</th><th>Side</th><th>Type</th><th>Qty</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+<p class="muted" data-testid="no-orders" hidden>No orders found.</p></div></main>
+<script>
+async function load() {
+  const s = $("#status-filter").value; const { data } = await API.get("/api/orders" + (s ? "?status=" + s : ""));
+  const tbody = $('[data-testid="orders-table"] tbody'); tbody.innerHTML = "";
+  data.items.forEach(o => tbody.append(el("tr", { testid: "order-" + o.id },
+    el("td", {}, "#" + o.id), el("td", {}, o.symbol), el("td", {}, o.side), el("td", {}, o.order_type), el("td", {}, String(o.quantity)),
+    el("td", {}, el("span", { class: "status", testid: "status" }, o.status)),
+    el("td", {}, o.status === "PENDING" ? el("button", { class: "secondary", testid: "cancel-" + o.id, onclick: async () => {
+      const r = await API.post(`/api/orders/${o.id}/cancel`); toast(r.ok ? "Order cancelled" : r.data.error, r.ok ? "success" : "error"); load(); } }, "Cancel") : ""))));
+  $('[data-testid="no-orders"]').hidden = data.count > 0;
+}
+if (shell("orders")) { $("#status-filter").addEventListener("change", load); load(); }
+</script></body></html>

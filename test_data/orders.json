@@ -1,0 +1,17 @@
+{
+  "quantity_boundaries": [
+    {"id": "qty-0-below-min", "quantity": 0, "valid": false},
+    {"id": "qty-1-min", "quantity": 1, "valid": true},
+    {"id": "qty-2-min-plus", "quantity": 2, "valid": true},
+    {"id": "qty-9999-max-minus", "quantity": 9999, "valid": true},
+    {"id": "qty-10000-max", "quantity": 10000, "valid": true},
+    {"id": "qty-10001-above-max", "quantity": 10001, "valid": false},
+    {"id": "qty-negative", "quantity": -5, "valid": false}
+  ],
+  "commission": [
+    {"id": "min-commission-applies", "symbol": "VOD", "quantity": 100, "expected_notional": 72.00, "expected_commission": 5.00},
+    {"id": "threshold-exact-5000", "symbol": "GSK", "quantity": 320, "expected_notional": 4992.00, "expected_commission": 5.00},
+    {"id": "percentage-commission", "symbol": "MSFT", "quantity": 20, "expected_notional": 8242.00, "expected_commission": 8.24},
+    {"id": "large-order", "symbol": "AAPL", "quantity": 100, "expected_notional": 18925.00, "expected_commission": 18.93}
+  ]
+}

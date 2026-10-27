@@ -1,0 +1,68 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>InvestPro | Watchlists</title>
+<link rel="stylesheet" href="styles.css"><script src="common.js"></script><script src="app.js"></script></head>
+<body><main>
+<h1 data-testid="page-title">Watchlists</h1>
+<div class="card"><h2>Create watchlist</h2>
+  <form id="create-form" class="row" novalidate>
+    <div><label for="wl-name">Name</label><input id="wl-name" data-testid="watchlist-name" maxlength="40">
+    <div class="field-error" data-testid="error-name"></div></div>
+    <div style="flex:0"><button class="primary" data-testid="create-watchlist" type="submit">Create</button></div>
+  </form></div>
+<div class="card">
+  <div class="row"><div><label for="wl-select">Watchlist</label><select id="wl-select" data-testid="watchlist-select"></select></div>
+  <div style="flex:0"><button class="danger" data-testid="delete-watchlist" id="delete-wl">Delete watchlist</button></div></div>
+  <div class="row"><div><label for="add-symbol">Add symbol</label><input id="add-symbol" data-testid="add-symbol-input" placeholder="e.g. TSLA"></div>
+  <div style="flex:0"><button class="secondary" data-testid="add-symbol" id="add-btn">Add</button></div></div>
+  <table data-testid="watchlist-table" style="margin-top:14px"><thead><tr><th><input type="checkbox" data-testid="select-all" id="select-all" style="width:auto"></th><th>Symbol</th><th>Name</th><th>Price</th></tr></thead><tbody></tbody></table>
+  <p class="muted" data-testid="empty-watchlist" hidden>This watchlist is empty.</p>
+  <button class="danger" data-testid="remove-selected" id="remove-btn" disabled>Remove selected</button>
+  <span class="muted" data-testid="selected-count"></span>
+</div></main>
+<script>
+let lists = [], instruments = {};
+const current = () => lists.find(w => String(w.id) === $("#wl-select").value);
+function selected() { return [...document.querySelectorAll('tbody input[type=checkbox]:checked')].map(c => c.value); }
+function updateSel() { const n = selected().length; $("#remove-btn").disabled = n === 0;
+  $('[data-testid="selected-count"]').textContent = n ? `${n} selected` : ""; }
+function renderTable() {
+  const wl = current(); const tbody = $('[data-testid="watchlist-table"] tbody'); tbody.innerHTML = "";
+  $("#select-all").checked = false;
+  wl.symbols.forEach(s => { const i = instruments[s] || {};
+    tbody.append(el("tr", { testid: "wl-row-" + s },
+      el("td", {}, el("input", { type: "checkbox", value: s, testid: "select-" + s, style: "width:auto", onchange: updateSel })),
+      el("td", {}, s), el("td", {}, i.name || ""), el("td", {}, i.price != null ? i.price.toFixed(2) : ""))); });
+  $('[data-testid="empty-watchlist"]').hidden = wl.symbols.length > 0;
+  $("#delete-wl").disabled = wl.default; updateSel();
+}
+async function load(selectId) {
+  lists = (await API.get("/api/watchlists")).data.items;
+  const sel = $("#wl-select"); sel.innerHTML = "";
+  lists.forEach(w => sel.append(el("option", { value: w.id }, w.name + (w.default ? " (default)" : ""))));
+  if (selectId) sel.value = selectId;
+  renderTable();
+}
+if (shell("watchlists")) (async () => {
+  (await API.get("/api/instruments")).data.items.forEach(i => instruments[i.symbol] = i);
+  await load();
+  $("#wl-select").addEventListener("change", renderTable);
+  $("#select-all").addEventListener("change", e => { document.querySelectorAll("tbody input[type=checkbox]").forEach(c => c.checked = e.target.checked); updateSel(); });
+  $("#create-form").addEventListener("submit", async e => { e.preventDefault(); clearErrors(e.target);
+    const name = $("#wl-name").value.trim();
+    if (!name) return showError("name", "Watchlist name is required");
+    const r = await API.post("/api/watchlists", { name });
+    if (!r.ok) return showError("name", r.data.error);
+    $("#wl-name").value = ""; toast(`Watchlist "${r.data.name}" created`); await load(r.data.id); });
+  $("#add-btn").addEventListener("click", async () => {
+    const r = await API.post(`/api/watchlists/${current().id}/symbols`, { symbol: $("#add-symbol").value.trim() });
+    if (!r.ok) return toast(r.data.error, "error");
+    $("#add-symbol").value = ""; toast("Instrument added"); await load(current().id); });
+  $("#remove-btn").addEventListener("click", async () => {
+    const syms = selected(); const r = await API.post(`/api/watchlists/${current().id}/symbols/remove`, { symbols: syms });
+    if (!r.ok) return toast(r.data.error, "error");
+    toast(`${syms.length} instrument(s) removed`); await load(current().id); });
+  $("#delete-wl").addEventListener("click", async () => {
+    const wl = current(); const r = await API.del(`/api/watchlists/${wl.id}`);
+    if (!r.ok) return toast(r.data.error, "error");
+    toast(`Watchlist "${wl.name}" deleted`); await load(); });
+})();
+</script></body></html>

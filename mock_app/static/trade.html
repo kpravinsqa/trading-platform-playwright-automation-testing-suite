@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>InvestPro | Trade</title>
+<link rel="stylesheet" href="styles.css"><script src="common.js"></script><script src="app.js"></script></head>
+<body><main>
+<h1 data-testid="page-title">Order ticket</h1>
+<div class="card"><form id="order-form" novalidate>
+  <div class="row">
+    <div><label for="symbol">Symbol</label><input id="symbol" data-testid="symbol"><div class="field-error" data-testid="error-symbol"></div></div>
+    <div><label for="side">Side</label><select id="side" data-testid="side"><option>BUY</option><option>SELL</option></select><div class="field-error" data-testid="error-side"></div></div>
+    <div><label for="order-type">Order type</label><select id="order-type" data-testid="order-type"><option>MARKET</option><option>LIMIT</option></select><div class="field-error" data-testid="error-order_type"></div></div>
+  </div>
+  <div class="row">
+    <div><label for="quantity">Quantity</label><input id="quantity" type="number" data-testid="quantity"><div class="field-error" data-testid="error-quantity"></div></div>
+    <div><label for="limit-price">Limit price</label><input id="limit-price" type="number" step="0.01" data-testid="limit-price" disabled><div class="field-error" data-testid="error-limit_price"></div></div>
+  </div>
+  <button class="secondary" type="button" data-testid="preview-order" id="preview-btn">Preview</button>
+  <button class="primary" type="submit" data-testid="place-order">Place order</button>
+</form></div>
+<div class="card" data-testid="preview-panel" hidden><h2>Order preview</h2>
+  <table><tr><th>Price</th><td data-testid="preview-price"></td></tr><tr><th>Notional</th><td data-testid="preview-notional"></td></tr>
+  <tr><th>Commission</th><td data-testid="preview-commission"></td></tr><tr><th>Estimated total</th><td data-testid="preview-total"></td></tr></table></div>
+<div class="card" data-testid="confirmation" hidden><h2>Order submitted</h2>
+  <p>Order <strong data-testid="confirm-id"></strong> — status <span class="status" data-testid="confirm-status"></span></p></div>
+</main>
+<script>
+function payload() {
+  const qtyRaw = $("#quantity").value; const p = { symbol: $("#symbol").value.trim(), side: $("#side").value,
+    order_type: $("#order-type").value, quantity: qtyRaw === "" ? null : Number(qtyRaw) };
+  if (p.order_type === "LIMIT") p.limit_price = $("#limit-price").value === "" ? null : Number($("#limit-price").value);
+  return p;
+}
+function handleErr(r) { if (r.data.field) showError(r.data.field, r.data.error); else toast(r.data.error, "error"); }
+if (shell("trade")) {
+  const qs = new URLSearchParams(location.search); if (qs.get("symbol")) $("#symbol").value = qs.get("symbol");
+  $("#order-type").addEventListener("change", e => { $("#limit-price").disabled = e.target.value !== "LIMIT"; });
+  $("#preview-btn").addEventListener("click", async () => { clearErrors($("#order-form"));
+    const r = await API.post("/api/orders/preview", payload()); if (!r.ok) return handleErr(r);
+    $('[data-testid="preview-price"]').textContent = r.data.price.toFixed(2);
+    $('[data-testid="preview-notional"]').textContent = money(r.data.notional, r.data.currency);
+    $('[data-testid="preview-commission"]').textContent = money(r.data.commission, r.data.currency);
+    $('[data-testid="preview-total"]').textContent = money(r.data.estimated_total, r.data.currency);
+    $('[data-testid="preview-panel"]').hidden = false; });
+  $("#order-form").addEventListener("submit", async e => { e.preventDefault(); clearErrors(e.target);
+    const r = await API.post("/api/orders", payload()); if (!r.ok) return handleErr(r);
+    $('[data-testid="confirm-id"]').textContent = "#" + r.data.id;
+    $('[data-testid="confirm-status"]').textContent = r.data.status;
+    $('[data-testid="confirmation"]').hidden = false; toast(`Order ${r.data.status.toLowerCase()}`); });
+}
+</script></body></html>

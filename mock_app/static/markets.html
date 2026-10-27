@@ -1,0 +1,37 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>InvestPro | Markets</title>
+<link rel="stylesheet" href="styles.css"><script src="common.js"></script><script src="app.js"></script></head>
+<body><main>
+<h1 data-testid="page-title">Markets</h1>
+<div class="card"><div class="row">
+  <div><label for="search">Search instruments</label><input id="search" data-testid="search-input" placeholder="Symbol or company name"></div>
+  <div style="flex:0"><button class="primary" data-testid="search-button" id="search-btn">Search</button></div>
+</div>
+<p class="muted" data-testid="result-count"></p>
+<table data-testid="instrument-table"><thead><tr><th>Symbol</th><th>Name</th><th>Exchange</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+<p class="muted" data-testid="no-results" hidden>No instruments match your search.</p>
+</div></main>
+<script>
+async function search() {
+  const q = $("#search").value.trim();
+  const { data } = await API.get("/api/instruments?q=" + encodeURIComponent(q));
+  const wls = (await API.get("/api/watchlists")).data.items;
+  const def = wls.find(w => w.default);
+  $('[data-testid="result-count"]').textContent = `${data.count} instrument(s) found`;
+  const tbody = $('[data-testid="instrument-table"] tbody'); tbody.innerHTML = "";
+  data.items.forEach(i => tbody.append(el("tr", { testid: "row-" + i.symbol },
+    el("td", {}, i.symbol), el("td", {}, i.name), el("td", {}, i.exchange), el("td", { testid: "price" }, i.price.toFixed(2)),
+    el("td", {}, el("span", { class: "status", testid: "status" }, i.status)),
+    el("td", {},
+      el("button", { class: "secondary", testid: "watch-" + i.symbol, onclick: async () => {
+        const r = await API.post(`/api/watchlists/${def.id}/symbols`, { symbol: i.symbol });
+        toast(r.ok ? `${i.symbol} added to ${def.name}` : r.data.error, r.ok ? "success" : "error"); } }, "+ Watch"),
+      " ",
+      el("a", { href: "trade.html?symbol=" + i.symbol, testid: "trade-" + i.symbol }, "Trade")))));
+  $('[data-testid="no-results"]').hidden = data.count > 0;
+}
+if (shell("markets")) {
+  $("#search-btn").addEventListener("click", search);
+  $("#search").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
+  search();
+}
+</script></body></html>

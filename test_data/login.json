@@ -1,0 +1,13 @@
+{
+  "invalid_credentials": [
+    {"id": "wrong-password", "username": "demo_trader", "password": "Wrong@123", "error": "Invalid username or password"},
+    {"id": "unknown-user", "username": "ghost_user", "password": "Trade@123", "error": "Invalid username or password"},
+    {"id": "case-sensitive-password", "username": "demo_trader", "password": "trade@123", "error": "Invalid username or password"},
+    {"id": "sql-injection-attempt", "username": "' OR '1'='1", "password": "' OR '1'='1", "error": "Invalid username or password"}
+  ],
+  "empty_fields": [
+    {"id": "both-empty", "username": "", "password": "", "errors": {"username": "Username is required", "password": "Password is required"}},
+    {"id": "username-empty", "username": "", "password": "Trade@123", "errors": {"username": "Username is required"}},
+    {"id": "password-empty", "username": "demo_trader", "password": "", "errors": {"password": "Password is required"}}
+  ]
+}
